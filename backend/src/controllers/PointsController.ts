@@ -17,7 +17,7 @@ class PointsController {
     const tsx = await knex.transaction();
   
     const point = {
-      image: 'image-fake',
+      image: request.file.filename,
       name,
       email,
       whatsapp,
@@ -31,7 +31,10 @@ class PointsController {
   
     const point_id = insertedIds[0];
   
-    const pointItems = items.map((item_id: number) => ({
+    const pointItems = items
+      .split(',')
+      .map((item: string) => Number(item.trim()))
+      .map((item_id: number) => ({
       item_id,
       point_id,
     }));
@@ -55,12 +58,17 @@ class PointsController {
       return response.status(400).json({ error: 'Client not Founr' });
     }
 
+    const serializedPoint = {
+      ...point,
+      image_url: `http://192.168.15.79:3333/uploads/${point.image}`
+    }
+
     const items = await knex('items')
       .join('point_item', 'items.id', '=', 'point_item.item_id')
       .where('point_item.point_id', id)
       .select('items.title');
 
-    return response.status(200).json({ point, items })
+    return response.status(200).json({ point: serializedPoint, items })
   }
 
   async index(request: Request, response: Response) {
@@ -78,7 +86,14 @@ class PointsController {
       .distinct()
       .select('points.*');
 
-    return response.status(200).json(points);
+      const serializedPoints = points.map(point => {
+        return {
+          ...point,
+          image_url: `http://192.168.15.79:3333/uploads/${point.image}`
+        }
+      })
+  
+    return response.status(200).json(serializedPoints);
   }
 }
 
